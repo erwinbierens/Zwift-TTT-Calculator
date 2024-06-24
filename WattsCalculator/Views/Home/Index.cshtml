@@ -1,0 +1,206 @@
+﻿@model List<WattsCalculator.Models.Rider>
+
+@{
+    ViewData["Title"] = "Team Time Trial Pacing Plan";
+}
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.10.2/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>$(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        });</script>
+}
+
+<h2>Team Time Trial Calculator</h2>
+
+@using (Html.BeginForm("Index", "Home", FormMethod.Post))
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Rider</th>
+                <th>Name</th>
+                <th>Height (cm)</th>
+                <th>Weight (kg)</th>
+                <th>FTP (Watts)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Count; i++)
+            {
+                <tr>
+                    <td>@(i + 1)</td>
+                    <td>
+                        <input asp-for="@Model[i].Name" class="form-control" />
+                    </td>
+                    <td>
+                        <input asp-for="@Model[i].Height" class="form-control" />
+                    </td>
+                    <td>
+                        <input asp-for="@Model[i].Weight" class="form-control" />
+                    </td>
+                    <td>
+                        <input asp-for="@Model[i].FTP" class="form-control" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <br />
+    <div class="form-group">
+        <label for="scalingFactor">Select Scaling Factor:</label>
+        <span class="info-icon" data-toggle="tooltip" data-placement="top" title="Choose the scaling factor that adjusts the power output calculations for your team. I.e. 1.1 Easy, 1.3 Performing">
+                <i class="fas fa-info-circle"></i>
+            </span>
+            <select id="scalingFactor" name="scalingFactor" class="form-control">
+                @Html.Raw(ViewBag.ScalingFactorOptions)
+            </select>
+    </div>
+    <div class="form-group">
+        <label for="velocity">Enter Velocity (km/h):</label>
+        <input id="velocity" name="velocity" type="number" step="0.1" class="form-control" value="@(ViewBag.Velocity ?? 0.0)" />
+    </div>
+    <br />
+    <button type="submit" class="btn btn-primary">Calculate</button>
+}
+
+@if (ViewBag.ResultsAvailable)
+{
+    <hr />
+
+    <h3>TTT Pacing Plan</h3>
+    @if (ViewBag.AveragePowerOutputWattsPerKg > 0)
+    {
+        <p><strong>Average Power Output of the Team:</strong></p>
+        <ul>
+            <li>Average Watts: @(Math.Floor(ViewBag.AveragePowerOutputWatts))</li>
+            <li>Average Watts per Kilogram: @ViewBag.AveragePowerOutputWattsPerKg.ToString("0.00")</li>
+        </ul>
+    }
+    else
+    {
+        <p>No valid riders with non-zero Power Output to calculate average power output.</p>
+    }
+
+    <hr />
+
+    <h3>Rider Details</h3>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Height (cm)</th>
+                <th>Weight (kg)</th>
+                <th>FTP (Watts)</th>
+                <th>Power Output (W/kg)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rider in Model)
+            {
+                <tr>
+                    <td>@rider.Name</td>
+                    <td>@rider.Height</td>
+                    <td>@rider.Weight</td>
+                    <td>@rider.FTP</td>
+                    <td>@(Math.Round(rider.PowerOutputWattsPerKg, 2))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+
+    <h3>Wattage per Position for Each Rider</h3>
+    <h5>This information is based on the average watts of the team with a ratio of @ViewBag.ScalingFactor and a velocity of @ViewBag.Velocity km/h.</h5>
+    <h6>Each pull will take 30 seconds</h6>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Rider</th>
+                <th>Position 1</th>
+                <th>Position 2</th>
+                <th>Position 3</th>
+                <th>Position 4</th>
+                <th>Position 5</th>
+                <th>Position 6</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rider in Model)
+            {
+                <tr>
+                    <td>@rider.Name</td>
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        <td>@(Math.Floor(rider.PullWattages[i]))</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+
+    <h3>Watts per Kilogram per Position for Each Rider</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Rider</th>
+                <th>Position 1</th>
+                <th>Position 2</th>
+                <th>Position 3</th>
+                <th>Position 4</th>
+                <th>Position 5</th>
+                <th>Position 6</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rider in Model)
+            {
+                <tr>
+                    <td>@rider.Name</td>
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        <td>@(Math.Round(rider.PullWattagesPerKg[i], 2))</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+
+    <h3>Power Zones per Position for Each Rider</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Rider</th>
+                <th>Position 1</th>
+                <th>Position 2</th>
+                <th>Position 3</th>
+                <th>Position 4</th>
+                <th>Position 5</th>
+                <th>Position 6</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rider in Model)
+            {
+                <tr>
+                    <td>@rider.Name</td>
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        var percentageOfFTP = rider.PullWattages[i] / rider.FTP * 100;
+                        var color = double.IsNaN(percentageOfFTP) ? "" : percentageOfFTP < 70 ? "green" : percentageOfFTP <= 99 ? "orange" : "red";
+                        <td style="background-color: @color;">@(double.IsNaN(percentageOfFTP) ? "" : Math.Round(percentageOfFTP, 2).ToString() + "%")</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
